@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  # ChromaDB — vector store
+  chroma:
+    image: chromadb/chroma:0.4.24
+    container_name: naive_rag_chroma
+    ports:
+      - "${CHROMA_PORT:-8000}:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=False
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # PostgreSQL — metadata store
+  postgres:
+    image: postgres:17-alpine
+    container_name: naive_rag_postgres
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-naive_rag}
+      POSTGRES_USER: ${POSTGRES_USER:-raguser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ragpass}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # опционально: init scripts для схемы
+      # - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-raguser} -d ${POSTGRES_DB:-naive_rag}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Ollama — embeddings + LLM
+  ollama:
+    image: ollama/ollama:latest
+    container_name: naive_rag_ollama
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    # GPU support (раскомментируй если есть NVIDIA GPU)
+    deploy:
+     resources:
+       reservations:
+         devices:
+           - driver: nvidia
+             count: all
+             capabilities: [gpu]
+
+volumes:
+  chroma_data:
+    driver: local
+  postgres_data:
+    driver: local
+  ollama_data:
+    driver: local
+
+# Опционально: сеть для явного именования
+networks:
+  default:
+    name: naive_rag_network
