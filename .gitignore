@@ -1,0 +1,21 @@
+# Docker
+.env
+docker-compose.override.yml
+
+# Rider / JetBrains
+.idea/
+*.sln.iml
+*.user
+*.suo
+*.cache
+*.log
+
+# Build output
+bin/
+obj/
+out/
+
+# Database files (если используешь SQLite)
+*.db
+*.db-shm
+*.db-wal
