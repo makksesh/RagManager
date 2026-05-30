@@ -50,10 +50,12 @@ class Program
             ICommand? command = commandName switch
             {
                 "pull" when parts.Length >= 2
-                    => new PullModelCommand(client, args[1]),
+                    => new PullModelCommand(client, parts[1]),
                 "delete" when parts.Length >= 2
                     => new DeleteModelCommand(client, parts[1]),
                 // "tags" => new ListModelsCommand(client),
+                "ls" when parts.Length >= 1
+                    => new ListModelsCommand(client),
                 // "set-inference" => new SetInferenceModelCommand(...),
 
                 _ => null
@@ -79,6 +81,7 @@ class Program
     private static void PrintHelp()
     {
         Console.WriteLine("Используйте:");
-        Console.WriteLine("  app pull <modelName>");
+        Console.WriteLine("> pull <modelName> - загрузка модели по названию");
+        Console.WriteLine("> delete <modelName> - удаление модели по названию");
     }
 }

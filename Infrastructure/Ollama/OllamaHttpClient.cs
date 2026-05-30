@@ -5,6 +5,7 @@ using System.Text.Json;
 using Core.Ollama.Domain;
 using Core.Ollama.Interfaces;
 using Infrastructure.Ollama.Dto;
+using Infrastructure.Ollama.Mappers;
 
 namespace Infrastructure.Ollama;
 
@@ -96,5 +97,29 @@ public class OllamaHttpClient : IOllamaClient
             throw new InvalidOperationException($"Model '{model}' not found.");
         }
         response.EnsureSuccessStatusCode();
+    }
+
+    public async Task<IReadOnlyList<OllamaModel>> GetTagsAsync(CancellationToken ct)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, "api/tags");
+        using var response = await _httpClient.SendAsync(request, ct);
+        
+        response.EnsureSuccessStatusCode();
+        
+        await using var stream = await response.Content.ReadAsStreamAsync(ct);
+
+        var dto = await JsonSerializer.DeserializeAsync<TagsResponseDto>(
+            stream,
+            JsonOptions,
+            ct);
+
+        if (dto?.Models is null || dto.Models.Count == 0)
+            return Array.Empty<OllamaModel>();
+
+        var result = dto.Models
+            .Select(m => m.ToDomain())
+            .ToList();
+        
+        return result;
     }
 }

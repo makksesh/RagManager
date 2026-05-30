@@ -3,9 +3,9 @@ using Infrastructure.Ollama.Dto;
 
 namespace Infrastructure.Ollama.Mappers;
 
-public class OllamaModelMappers
+public static class OllamaModelMappers
 {
-    public static OllamaModel ToDomain(TagModelDto dto)
+    public static OllamaModel ToDomain(this TagModelDto dto)
     {
         var name = dto.Name ?? dto.Model ?? "unknown";
 

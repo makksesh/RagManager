@@ -61,25 +61,6 @@ wait_for_service "ChromaDB" \
 wait_for_service "Ollama" \
     "docker exec naive_rag_ollama ollama list"
 
-# Проверка и загрузка моделей
-echo -e "\n${YELLOW}Checking models...${NC}"
-
-# Функция загрузки модели
-pull_model_if_missing() {
-    local model=$1
-    
-    if docker exec naive_rag_ollama ollama list | grep -q "^$model"; then
-        echo -e "${GREEN}✓ Model $model already exists${NC}"
-    else
-        echo -e "${YELLOW}Pulling model $model...${NC}"
-        docker exec naive_rag_ollama ollama pull "$model"
-        echo -e "${GREEN}✓ Model $model downloaded${NC}"
-    fi
-}
-
-pull_model_if_missing "nomic-embed-text"
-pull_model_if_missing "llama3.2:3b"
-
 # Применение миграций (если .NET SDK установлен)
 if command -v dotnet &> /dev/null; then
     echo -e "\n${YELLOW}Applying database migrations...${NC}"

@@ -10,4 +10,6 @@ public interface IOllamaClient
         CancellationToken ct = default);
     
     Task DeleteModelAsync(string model, CancellationToken ct = default);
+    
+    Task<IReadOnlyList<OllamaModel>> GetTagsAsync(CancellationToken ct = default);
 }
