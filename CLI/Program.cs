@@ -1,5 +1,7 @@
 ﻿using CLI.Commands;
+using Core.Chroma;
 using Core.Ollama.Interfaces;
+using Infrastructure.Chroma;
 using Infrastructure.Ollama;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -23,6 +25,11 @@ class Program
         services.AddHttpClient<IOllamaClient, OllamaHttpClient>(client =>
         {
             client.BaseAddress = new Uri("http://localhost:11434");
+        });
+
+        services.AddHttpClient<IVectorStore, ChromaHttpClient>(client =>
+        {
+            client.BaseAddress = new Uri("http://localhost:8000");
         });
 
         var provider = services.BuildServiceProvider();
