@@ -24,6 +24,10 @@ public static class DependencyInjection
         builder.AddOllamaEmbeddingGenerator(
             modelId: "nomic-embed-text",
             endpoint: new Uri(ollamaEndpoint));
+        
+        builder.AddOllamaChatCompletion(
+            modelId: "llama3.2",       // или любая другая модель
+            endpoint: new Uri(ollamaEndpoint));
 
         // Qdrant VectorStore
         builder.Services.AddQdrantVectorStore(qdrantHost);
@@ -31,6 +35,7 @@ public static class DependencyInjection
         // Свои сервисы
         builder.Services.AddSingleton<IDocumentSource, FileSystemDocumentSource>();
         builder.Services.AddScoped<IDocumentIngestionService, SemanticKernelIngestionService>();
+        builder.Services.AddScoped<IRagSearchService, RagSearchService>();
 
         return builder;
     }

@@ -1,19 +1,15 @@
-version: '3.8'
-
 services:
-  # ChromaDB — vector store
-  chroma:
-    image: chromadb/chroma:0.4.24
-    container_name: naive_rag_chroma
+  # Qdrant — vector store
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: naive_rag_qdrant
     ports:
-      - "${CHROMA_PORT:-8000}:8000"
+      - "${QDRANT_PORT:-6333}:6333"       # REST API + Web UI
+      - "${QDRANT_GRPC_PORT:-6334}:6334"  # gRPC
     volumes:
-      - chroma_data:/chroma/chroma
-    environment:
-      - IS_PERSISTENT=TRUE
-      - ANONYMIZED_TELEMETRY=False
+      - qdrant_data:/qdrant/storage
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -21,7 +17,7 @@ services:
 
   # PostgreSQL — metadata store
   postgres:
-    image: postgres:17-alpine
+    image: postgres:16
     container_name: naive_rag_postgres
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
@@ -64,7 +60,7 @@ services:
 #             capabilities: [gpu]
 
 volumes:
-  chroma_data:
+  qdrant_data:
     driver: local
   postgres_data:
     driver: local

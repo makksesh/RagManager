@@ -30,6 +30,7 @@ class Program
         
         var ollamaClient = kernel.Services.GetRequiredService<IOllamaClient>();
         var ingestionService = kernel.Services.GetRequiredService<IDocumentIngestionService>();
+        var ragService = kernel.Services.GetRequiredService<IRagSearchService>();
         
 
         while (!ct.IsCancellationRequested)
@@ -60,6 +61,17 @@ class Program
                 // "tags" => new ListModelsCommand(client),
                 "ls" when parts.Length >= 1
                     => new ListModelsCommand(ollamaClient),
+                "ingest" when parts.Length >= 3
+                    => new IngestCommand(
+                        ingestionService,
+                        path: parts[1],
+                        collection: parts[2]),
+                "ask" when parts.Length >= 3
+                    => new AskCommand(
+                        ragService,
+                        collection: parts[1],
+                        // всё после "ask <collection>" склеиваем в вопрос
+                        question: string.Join(' ', parts[2..])),
                 // "set-inference" => new SetInferenceModelCommand(...),
 
                 _ => null
@@ -87,5 +99,7 @@ class Program
         Console.WriteLine("Используйте:");
         Console.WriteLine("> pull <modelName> - загрузка модели по названию");
         Console.WriteLine("> delete <modelName> - удаление модели по названию");
+        Console.WriteLine("> ingest <path> <collection> - индексировать файл или папку");
+        Console.WriteLine("> ask <collection> <вопрос> - задать вопрос по документам");
     }
 }
