@@ -1,9 +1,12 @@
 ﻿using CLI.Commands;
-using Core.Chroma;
+using Core.Documents.Interfaces;
 using Core.Ollama.Interfaces;
-using Infrastructure.Chroma;
+using Infrastructure;
+using Infrastructure.Documents;
 using Infrastructure.Ollama;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.SemanticKernel;
+
 
 namespace CLI;
 
@@ -19,21 +22,15 @@ class Program
         };
         var ct = cts.Token;
 
-        // DI-контейнер
-        var services = new ServiceCollection();
+        var kernelBuilder = Kernel.CreateBuilder();
+        
+        kernelBuilder.AddInfrastructure();
 
-        services.AddHttpClient<IOllamaClient, OllamaHttpClient>(client =>
-        {
-            client.BaseAddress = new Uri("http://localhost:11434");
-        });
-
-        services.AddHttpClient<IVectorStore, ChromaHttpClient>(client =>
-        {
-            client.BaseAddress = new Uri("http://localhost:8000");
-        });
-
-        var provider = services.BuildServiceProvider();
-        var client = provider.GetRequiredService<IOllamaClient>();
+        var kernel = kernelBuilder.Build();
+        
+        var ollamaClient = kernel.Services.GetRequiredService<IOllamaClient>();
+        var ingestionService = kernel.Services.GetRequiredService<IDocumentIngestionService>();
+        
 
         while (!ct.IsCancellationRequested)
         {
@@ -57,12 +54,12 @@ class Program
             ICommand? command = commandName switch
             {
                 "pull" when parts.Length >= 2
-                    => new PullModelCommand(client, parts[1]),
+                    => new PullModelCommand(ollamaClient, parts[1]),
                 "delete" when parts.Length >= 2
-                    => new DeleteModelCommand(client, parts[1]),
+                    => new DeleteModelCommand(ollamaClient, parts[1]),
                 // "tags" => new ListModelsCommand(client),
                 "ls" when parts.Length >= 1
-                    => new ListModelsCommand(client),
+                    => new ListModelsCommand(ollamaClient),
                 // "set-inference" => new SetInferenceModelCommand(...),
 
                 _ => null
