@@ -122,4 +122,54 @@ public class OllamaHttpClient : IOllamaClient
         
         return result;
     }
+    
+    public async Task<IReadOnlyList<float[]>> EmbedAsync(
+        string model,
+        IReadOnlyList<string> inputs,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(model))
+            throw new ArgumentException("Модель недоступна.", nameof(model));
+        if (inputs is null || inputs.Count == 0)
+            throw new ArgumentException("Строка для эмбеддинга пуста.", nameof(inputs));
+
+        var requestBody = new
+        {
+            model,
+            input = inputs
+        };
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/embed")
+        {
+            Content = new StringContent(
+                JsonSerializer.Serialize(requestBody, JsonOptions),
+                Encoding.UTF8,
+                "application/json")
+        };
+
+        using var response = await _httpClient.SendAsync(request, ct);
+        response.EnsureSuccessStatusCode();
+
+        await using var stream = await response.Content.ReadAsStreamAsync(ct);
+
+        var dto = await JsonSerializer.DeserializeAsync<OllamaEmbedResponseDto>(
+            stream,
+            JsonOptions,
+            ct);
+
+        if (dto?.Embeddings is null || dto.Embeddings.Count == 0)
+            return Array.Empty<float[]>();
+        
+        var result = new List<float[]>(dto.Embeddings.Count);
+
+        foreach (var vector in dto.Embeddings)
+        {
+            if (vector is null || vector.Count == 0)
+                continue;
+
+            result.Add(vector.ToArray());
+        }
+
+        return result;
+    }
 }

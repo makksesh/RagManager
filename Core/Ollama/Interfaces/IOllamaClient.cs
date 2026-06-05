@@ -12,4 +12,9 @@ public interface IOllamaClient
     Task DeleteModelAsync(string model, CancellationToken ct = default);
     
     Task<IReadOnlyList<OllamaModel>> GetTagsAsync(CancellationToken ct = default);
+    
+    Task<IReadOnlyList<float[]>> EmbedAsync(
+        string model,
+        IReadOnlyList<string> inputs,
+        CancellationToken ct = default);
 }

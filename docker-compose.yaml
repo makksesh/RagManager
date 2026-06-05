@@ -40,36 +40,36 @@ services:
       retries: 5
     restart: unless-stopped
 
-  # Ollama — embeddings + LLM
-  ollama:
-    image: ollama/ollama:latest
-    container_name: naive_rag_ollama
-    ports:
-      - "${OLLAMA_PORT:-11434}:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    healthcheck:
-      test: ["CMD", "ollama", "list"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    restart: unless-stopped
-    # GPU support (раскомментируй если есть NVIDIA GPU)
-    deploy:
-     resources:
-       reservations:
-         devices:
-           - driver: nvidia
-             count: all
-             capabilities: [gpu]
+#  # Ollama — embeddings + LLM
+#  ollama:
+#    image: ollama/ollama:latest
+#    container_name: naive_rag_ollama
+#    ports:
+#      - "${OLLAMA_PORT:-11434}:11434"
+#    volumes:
+#      - ollama_data:/root/.ollama
+#    healthcheck:
+#      test: ["CMD", "ollama", "list"]
+#      interval: 30s
+#      timeout: 10s
+#      retries: 3
+#    restart: unless-stopped
+#    # GPU support (раскомментируй если есть NVIDIA GPU)
+#    deploy:
+#     resources:
+#       reservations:
+#         devices:
+#           - driver: nvidia
+#             count: all
+#             capabilities: [gpu]
 
 volumes:
   chroma_data:
     driver: local
   postgres_data:
     driver: local
-  ollama_data:
-    driver: local
+#  ollama_data:
+#    driver: local
 
 # Опционально: сеть для явного именования
 networks:
