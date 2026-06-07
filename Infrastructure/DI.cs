@@ -2,6 +2,7 @@
 using Core.Documents.Interfaces;
 using Core.Ollama.Interfaces;
 using Infrastructure.Ollama;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
 
@@ -11,9 +12,12 @@ public static class DependencyInjection
 {
     public static IKernelBuilder AddInfrastructure(
         this IKernelBuilder builder,
-        string ollamaEndpoint = "http://localhost:11434",
-        string qdrantHost = "localhost")
+        IConfiguration? configuration = null)
     {
+        var ollamaEndpoint = configuration?["Ollama__BaseUrl"] ?? "http://localhost:11434";
+        var qdrantHost     = configuration?["Qdrant__Host"]    ?? "localhost";
+        var qdrantPort     = int.TryParse(configuration?["Qdrant__Port"], out var p) ? p : 6334;
+        
         // Ollama CLI-клиент (для pull/delete/ls моделей)
         builder.Services.AddHttpClient<IOllamaClient, OllamaHttpClient>(client =>
         {
@@ -31,8 +35,8 @@ public static class DependencyInjection
 
         // Qdrant VectorStore
         builder.Services.AddQdrantVectorStore(
-            host: "localhost",
-            port: 6334,
+            host:  qdrantHost,
+            port:  qdrantPort,
             https: false);
 
         // Свои сервисы

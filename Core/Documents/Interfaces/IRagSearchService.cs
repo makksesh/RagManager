@@ -10,4 +10,10 @@ public interface IRagSearchService
         string collectionName,
         int topK = 5,
         CancellationToken ct = default);
+
+    IAsyncEnumerable<string> AskStreamingAsync(
+        string question,
+        string collectionName,
+        int topK = 15,
+        CancellationToken ct = default);
 }

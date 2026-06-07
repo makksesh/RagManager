@@ -1,73 +1,122 @@
-services:
-  # Qdrant — vector store
-  qdrant:
-    image: qdrant/qdrant:latest
-    container_name: naive_rag_qdrant
-    ports:
-      - "${QDRANT_PORT:-6333}:6333"       # REST API + Web UI
-      - "${QDRANT_GRPC_PORT:-6334}:6334"  # gRPC
-    volumes:
-      - qdrant_data:/qdrant/storage
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-    restart: unless-stopped
+name: ragmanager
 
-  # PostgreSQL — metadata store
-  postgres:
-    image: postgres:16
-    container_name: naive_rag_postgres
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-naive_rag}
-      POSTGRES_USER: ${POSTGRES_USER:-raguser}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ragpass}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      # опционально: init scripts для схемы
-      # - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+services:
+
+  # ── RagManager API ──────────────────────────────────────────────────────────
+  ragmanager_api:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+    container_name: da_ragmanager_api
+    restart: unless-stopped
+    depends_on:
+      - ragmanager_cli   # CLI может быть нужен для первичного ingest
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-raguser} -d ${POSTGRES_DB:-naive_rag}"]
-      interval: 10s
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"]
+      interval: 15s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
+      start_period: 30s
+    environment:
+      ASPNETCORE_URLS:       http://0.0.0.0:5000
+      Ollama__BaseUrl:       http://da_ollama:11434   # da_ollama из devassistant
+      Qdrant__Host:          da_qdrant                # da_qdrant из devassistant
+      Qdrant__Port:          6334
+    networks:
+      - devassistant_backend   # та же сеть что у devassistant
 
-#  # Ollama — embeddings + LLM
-#  ollama:
-#    image: ollama/ollama:latest
-#    container_name: naive_rag_ollama
+  # ── RagManager CLI ──────────────────────────────────────────────────────────
+  ragmanager_cli:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.cli
+    container_name: da_ragmanager_cli
+    restart: "no"
+    stdin_open: true
+    tty: true
+    environment:
+      Ollama__BaseUrl: http://da_ollama:11434
+      Qdrant__Host:    da_qdrant
+      Qdrant__Port:    6334
+    networks:
+      - devassistant_backend
+
+networks:
+  devassistant_backend:
+    external: true   # не создаём — подключаемся к уже существующей
+    name: devassistant_backend
+
+
+#services:
+#  # Qdrant — vector store
+#  qdrant:
+#    image: qdrant/qdrant:latest
+#    container_name: naive_rag_qdrant
 #    ports:
-#      - "${OLLAMA_PORT:-11434}:11434"
+#      - "${QDRANT_PORT:-6333}:6333"       # REST API + Web UI
+#      - "${QDRANT_GRPC_PORT:-6334}:6334"  # gRPC
 #    volumes:
-#      - ollama_data:/root/.ollama
+#      - qdrant_data:/qdrant/storage
 #    healthcheck:
-#      test: ["CMD", "ollama", "list"]
-#      interval: 30s
-#      timeout: 10s
+#      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
+#      interval: 10s
+#      timeout: 5s
 #      retries: 3
 #    restart: unless-stopped
-#    # GPU support (раскомментируй если есть NVIDIA GPU)
-#    deploy:
-#     resources:
-#       reservations:
-#         devices:
-#           - driver: nvidia
-#             count: all
-#             capabilities: [gpu]
-
-volumes:
-  qdrant_data:
-    driver: local
-  postgres_data:
-    driver: local
-#  ollama_data:
+#
+#  # PostgreSQL — metadata store
+#  postgres:
+#    image: postgres:16
+#    container_name: naive_rag_postgres
+#    ports:
+#      - "${POSTGRES_PORT:-5432}:5432"
+#    environment:
+#      POSTGRES_DB: ${POSTGRES_DB:-naive_rag}
+#      POSTGRES_USER: ${POSTGRES_USER:-raguser}
+#      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ragpass}
+#    volumes:
+#      - postgres_data:/var/lib/postgresql/data
+#      # опционально: init scripts для схемы
+#      # - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+#    healthcheck:
+#      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-raguser} -d ${POSTGRES_DB:-naive_rag}"]
+#      interval: 10s
+#      timeout: 5s
+#      retries: 5
+#    restart: unless-stopped
+#
+##  # Ollama — embeddings + LLM
+##  ollama:
+##    image: ollama/ollama:latest
+##    container_name: naive_rag_ollama
+##    ports:
+##      - "${OLLAMA_PORT:-11434}:11434"
+##    volumes:
+##      - ollama_data:/root/.ollama
+##    healthcheck:
+##      test: ["CMD", "ollama", "list"]
+##      interval: 30s
+##      timeout: 10s
+##      retries: 3
+##    restart: unless-stopped
+##    # GPU support (раскомментируй если есть NVIDIA GPU)
+##    deploy:
+##     resources:
+##       reservations:
+##         devices:
+##           - driver: nvidia
+##             count: all
+##             capabilities: [gpu]
+#
+#volumes:
+#  qdrant_data:
 #    driver: local
-
-# Опционально: сеть для явного именования
-networks:
-  default:
-    name: naive_rag_network
+#  postgres_data:
+#    driver: local
+##  ollama_data:
+##    driver: local
+#
+## Опционально: сеть для явного именования
+#networks:
+#  default:
+#    name: naive_rag_network

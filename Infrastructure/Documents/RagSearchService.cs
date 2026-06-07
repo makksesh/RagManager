@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Core.Documents.Interfaces;
 using Core.Documents.Models;
 using Microsoft.Extensions.AI;
@@ -60,5 +61,30 @@ public class RagSearchService : IRagSearchService
         // 5. Ответ через Ollama
         var response = await _chat.GetResponseAsync(prompt, cancellationToken: ct);
         return response.Text;
+    }
+    
+    // В RagSearchService.cs добавить метод:
+    public async IAsyncEnumerable<string> AskStreamingAsync(
+        string question,
+        string collectionName,
+        int topK = 15,
+        [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        var queryEmbedding = await _embedder.GenerateAsync(question, cancellationToken: ct);
+
+        var collection = _vectorStore.GetCollection<ulong, DocumentChunk>(collectionName);
+        var searchResults = collection.SearchAsync(
+            queryEmbedding.Vector,
+            top: topK,
+            cancellationToken: ct);
+
+        var contextParts = new List<string>();
+        await foreach (var result in searchResults)
+            contextParts.Add($"[{result.Record.Source}]\n{result.Record.Text}");
+
+        var prompt = $"Контекст:\n{string.Join("\n\n", contextParts)}\n\nВопрос: {question}\n\nОтвет:";
+
+        await foreach (var chunk in _chat.GetStreamingResponseAsync(prompt, cancellationToken: ct))
+            yield return chunk.Text ?? "";
     }
 }
